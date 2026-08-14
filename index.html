@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#08110d" />
+    <meta
+      name="description"
+      content="Fixture, resultados en vivo y tabla de posiciones de la Liga entre Amigos."
+    />
+    <title>Liga entre Amigos</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #08110d;
+        --surface: #101d17;
+        --surface-2: #17271f;
+        --line: rgba(255, 255, 255, 0.09);
+        --text: #f7fbf8;
+        --muted: #98aaa0;
+        --green: #4ade80;
+        --green-dark: #173e27;
+        --lime: #b7f34a;
+        --red: #ff6b6b;
+        --shadow: 0 18px 45px rgba(0, 0, 0, 0.24);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        min-height: 100dvh;
+        background:
+          radial-gradient(circle at 90% -10%, rgba(74, 222, 128, 0.14), transparent 34rem),
+          var(--bg);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      button, input { font: inherit; }
+      button { color: inherit; }
+      button:focus-visible, input:focus-visible {
+        outline: 3px solid rgba(183, 243, 74, 0.55);
+        outline-offset: 2px;
+      }
+
+      .shell { width: min(100%, 860px); margin: 0 auto; }
+      .topbar {
+        position: sticky;
+        z-index: 20;
+        top: 0;
+        padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+        border-bottom: 1px solid var(--line);
+        background: rgba(8, 17, 13, 0.86);
+        backdrop-filter: blur(18px);
+      }
+      .topbar-inner {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        width: min(100%, 860px);
+        margin: 0 auto;
+      }
+      .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
+      .brand-mark {
+        display: grid;
+        width: 42px;
+        height: 42px;
+        place-items: center;
+        flex: 0 0 auto;
+        border: 1px solid rgba(183, 243, 74, 0.22);
+        border-radius: 14px;
+        background: linear-gradient(145deg, #244a2e, #102519);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,.12);
+        font-size: 23px;
+      }
+      .brand h1 { margin: 0; overflow: hidden; font-size: 16px; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }
+      .live-label { display: flex; align-items: center; gap: 6px; margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+      .live-dot { width: 7px; height: 7px; border-radius: 99px; background: var(--green); box-shadow: 0 0 0 4px rgba(74,222,128,.11); }
+      .live-dot.offline { background: var(--red); box-shadow: 0 0 0 4px rgba(255,107,107,.11); }
+      .top-actions { display: flex; align-items: center; gap: 8px; }
+      .icon-button, .organizer-button {
+        display: inline-flex;
+        min-height: 40px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255,255,255,.055);
+        cursor: pointer;
+      }
+      .icon-button { width: 40px; padding: 0; font-size: 18px; }
+      .icon-button.spin svg { animation: spin .7s linear infinite; }
+      .organizer-button { padding: 0 12px; color: #d8e5dc; font-size: 12px; font-weight: 800; }
+      .organizer-button.active { border-color: rgba(74,222,128,.35); background: var(--green-dark); color: #bdf6cd; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+
+      main { padding: 18px 16px calc(96px + env(safe-area-inset-bottom)); }
+      .offline-banner {
+        display: none;
+        margin-bottom: 12px;
+        padding: 11px 13px;
+        border: 1px solid rgba(255,107,107,.25);
+        border-radius: 13px;
+        background: rgba(255,107,107,.09);
+        color: #ffc7c7;
+        font-size: 12px;
+      }
+      .offline-banner.show { display: block; }
+
+      .hero {
+        overflow: hidden;
+        position: relative;
+        padding: 20px;
+        border: 1px solid rgba(183,243,74,.14);
+        border-radius: 24px;
+        background:
+          linear-gradient(145deg, rgba(43,87,55,.88), rgba(15,38,24,.94)),
+          var(--surface);
+        box-shadow: var(--shadow);
+      }
+      .hero::after {
+        content: "";
+        position: absolute;
+        right: -44px;
+        bottom: -70px;
+        width: 190px;
+        height: 190px;
+        border: 34px solid rgba(255,255,255,.035);
+        border-radius: 50%;
+      }
+      .eyebrow { margin: 0 0 6px; color: var(--lime); font-size: 11px; font-weight: 900; letter-spacing: .13em; text-transform: uppercase; }
+      .hero-title { margin: 0; font-size: clamp(23px, 7vw, 34px); letter-spacing: -.04em; }
+      .hero-copy { margin: 7px 0 17px; color: #b8c9bf; font-size: 13px; line-height: 1.5; }
+      .next-match {
+        position: relative;
+        z-index: 1;
+        padding: 14px;
+        border: 1px solid rgba(255,255,255,.09);
+        border-radius: 18px;
+        background: rgba(4,13,8,.44);
+      }
+      .next-meta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 13px; color: #b8c9bf; font-size: 11px; font-weight: 800; }
+      .next-meta time { text-align: right; }
+      .next-teams { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); align-items: center; gap: 10px; }
+      .next-team { min-width: 0; text-align: center; }
+      .next-team .club-badge { margin: 0 auto 7px; }
+      .next-club { overflow: hidden; font-size: 12px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+      .next-player { margin-top: 2px; color: var(--muted); font-size: 10px; }
+      .versus { color: var(--lime); font-size: 14px; font-weight: 950; }
+      .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+      .summary-item { padding: 11px 7px; border: 1px solid var(--line); border-radius: 14px; background: rgba(255,255,255,.035); text-align: center; }
+      .summary-number { display: block; font-size: 18px; font-weight: 950; }
+      .summary-label { display: block; margin-top: 2px; color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; }
+
+      .content-section { display: none; padding-top: 22px; }
+      .content-section.active { display: block; animation: rise .22s ease-out; }
+      @keyframes rise { from { opacity: 0; transform: translateY(5px); } }
+      .section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+      .section-heading h2 { margin: 0; font-size: 20px; letter-spacing: -.03em; }
+      .section-heading p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+      .round { margin-bottom: 14px; padding: 15px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+      .round-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+      .round-title { font-size: 13px; font-weight: 950; }
+      .round-date { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: capitalize; }
+      .match-row {
+        display: grid;
+        grid-template-columns: minmax(0,1fr) 60px minmax(0,1fr);
+        align-items: center;
+        gap: 8px;
+        min-height: 74px;
+        padding: 10px 0;
+        border-top: 1px solid var(--line);
+      }
+      .match-team { display: flex; min-width: 0; align-items: center; gap: 8px; }
+      .match-team.away { flex-direction: row-reverse; text-align: right; }
+      .match-team-copy { min-width: 0; }
+      .match-club { overflow: hidden; font-size: 11px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+      .match-player { overflow: hidden; margin-top: 2px; color: var(--muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+      .club-badge {
+        display: grid;
+        width: 40px;
+        height: 40px;
+        place-items: center;
+        flex: 0 0 auto;
+        border: 2px solid rgba(255,255,255,.16);
+        border-radius: 13px;
+        background: var(--club, #2f6040);
+        color: white;
+        box-shadow: inset 0 0 0 2px rgba(0,0,0,.14), 0 5px 14px rgba(0,0,0,.17);
+        font-size: 9px;
+        font-weight: 950;
+        letter-spacing: -.02em;
+      }
+      .match-center { text-align: center; }
+      .match-score { display: block; font-size: 18px; font-weight: 950; letter-spacing: .08em; }
+      .match-time { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; font-weight: 700; }
+      .edit-result {
+        display: none;
+        width: 100%;
+        margin-top: 6px;
+        padding: 4px 2px;
+        border: 1px solid rgba(74,222,128,.25);
+        border-radius: 8px;
+        background: rgba(74,222,128,.1);
+        color: #bdf6cd;
+        cursor: pointer;
+        font-size: 8px;
+        font-weight: 900;
+      }
+      body.organizer .edit-result { display: block; }
+      .resting { padding-top: 10px; border-top: 1px dashed var(--line); color: var(--muted); font-size: 10px; }
+      .resting strong { color: #cbd8d0; }
+
+      .table-card { overflow: hidden; border: 1px solid var(--line); border-radius: 20px; background: var(--surface); }
+      .standings { width: 100%; border-collapse: collapse; font-size: 11px; }
+      .standings th { padding: 11px 5px; background: rgba(255,255,255,.035); color: var(--muted); font-size: 9px; letter-spacing: .04em; text-align: center; text-transform: uppercase; }
+      .standings th:nth-child(2) { text-align: left; }
+      .standings td { padding: 11px 5px; border-top: 1px solid var(--line); text-align: center; }
+      .standings td:nth-child(2) { text-align: left; }
+      .position { color: var(--muted); font-weight: 900; }
+      .leader .position, .points { color: var(--lime); font-weight: 950; }
+      .table-team { display: flex; min-width: 0; align-items: center; gap: 7px; }
+      .mini-badge { display: grid; width: 27px; height: 27px; place-items: center; flex: 0 0 auto; border-radius: 9px; background: var(--club, #2f6040); color: #fff; font-size: 7px; font-weight: 950; }
+      .table-team-text { min-width: 0; }
+      .table-player { overflow: hidden; max-width: 95px; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
+      .table-club { overflow: hidden; max-width: 95px; margin-top: 1px; color: var(--muted); font-size: 8px; text-overflow: ellipsis; white-space: nowrap; }
+      .legend { padding: 12px 14px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; line-height: 1.6; }
+
+      .teams-grid { display: grid; gap: 10px; }
+      .team-card { display: flex; align-items: center; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 17px; background: var(--surface); }
+      .team-card .club-badge { width: 46px; height: 46px; }
+      .team-card-copy { min-width: 0; flex: 1; }
+      .team-card-player { font-size: 14px; font-weight: 950; }
+      .team-card-club { margin-top: 3px; color: var(--muted); font-size: 11px; }
+      .europe-chip { padding: 5px 7px; border-radius: 999px; background: rgba(83,143,255,.12); color: #a9c6ff; font-size: 8px; font-weight: 900; letter-spacing: .05em; }
+
+      .skeleton { position: relative; overflow: hidden; min-height: 90px; border-radius: 17px; background: var(--surface); }
+      .skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255,255,255,.06), transparent); animation: shimmer 1.3s infinite; }
+      @keyframes shimmer { to { transform: translateX(100%); } }
+
+      .bottom-nav {
+        position: fixed;
+        z-index: 30;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        padding: 8px max(12px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+        border-top: 1px solid var(--line);
+        background: rgba(9,18,14,.95);
+        backdrop-filter: blur(18px);
+      }
+      .nav-button { display: grid; gap: 3px; place-items: center; padding: 7px 5px; border: 0; border-radius: 12px; background: transparent; color: var(--muted); cursor: pointer; font-size: 9px; font-weight: 850; }
+      .nav-button svg { width: 20px; height: 20px; }
+      .nav-button.active { background: rgba(74,222,128,.1); color: var(--green); }
+
+      .toast {
+        visibility: hidden;
+        position: fixed;
+        z-index: 80;
+        top: calc(70px + env(safe-area-inset-top));
+        left: 50%;
+        width: max-content;
+        max-width: calc(100% - 32px);
+        padding: 10px 14px;
+        transform: translate(-50%, -10px);
+        border: 1px solid rgba(74,222,128,.25);
+        border-radius: 999px;
+        background: #163523;
+        box-shadow: var(--shadow);
+        color: #c8f7d5;
+        opacity: 0;
+        font-size: 11px;
+        font-weight: 850;
+        transition: .2s ease;
+      }
+      .toast.show { visibility: visible; transform: translate(-50%, 0); opacity: 1; }
+
+      dialog { width: min(calc(100% - 28px), 430px); padding: 0; border: 1px solid var(--line); border-radius: 23px; background: #101d17; color: var(--text); box-shadow: 0 26px 90px rgba(0,0,0,.55); }
+      dialog::backdrop { background: rgba(0,0,0,.68); backdrop-filter: blur(4px); }
+      .dialog-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; padding: 19px 19px 11px; }
+      .dialog-head h2 { margin: 0; font-size: 19px; }
+      .dialog-head p { margin: 5px 0 0; color: var(--muted); font-size: 11px; line-height: 1.45; }
+      .close-dialog { width: 34px; height: 34px; flex: 0 0 auto; border: 1px solid var(--line); border-radius: 10px; background: rgba(255,255,255,.05); cursor: pointer; }
+      .dialog-body { padding: 10px 19px 20px; }
+      .field { display: grid; gap: 6px; margin-bottom: 13px; }
+      .field label { color: #cddad2; font-size: 10px; font-weight: 900; }
+      .field input { width: 100%; height: 48px; padding: 0 13px; border: 1px solid var(--line); border-radius: 13px; background: #0a1510; color: var(--text); }
+      .score-fields { display: grid; grid-template-columns: 1fr 34px 1fr; align-items: end; gap: 9px; }
+      .score-divider { padding-bottom: 27px; color: var(--muted); text-align: center; font-weight: 900; }
+      .primary-button, .secondary-button { width: 100%; min-height: 48px; border-radius: 13px; cursor: pointer; font-size: 12px; font-weight: 950; }
+      .primary-button { border: 0; background: var(--green); color: #06200f; }
+      .secondary-button { margin-top: 8px; border: 1px solid var(--line); background: transparent; color: #c9d6ce; }
+      .primary-button:disabled { cursor: wait; opacity: .6; }
+      .form-error { min-height: 16px; margin: 7px 0; color: #ffaaaa; font-size: 10px; }
+
+      @media (min-width: 700px) {
+        .topbar { padding-right: 24px; padding-left: 24px; }
+        main { padding: 26px 24px 112px; }
+        .hero { padding: 28px; }
+        .hero-grid { display: grid; grid-template-columns: 1fr 1.15fr; align-items: end; gap: 28px; }
+        .hero-copy { margin-bottom: 0; }
+        .summary-grid { grid-template-columns: repeat(3, 120px); justify-content: end; }
+        .teams-grid { grid-template-columns: repeat(2, 1fr); }
+        .match-row { grid-template-columns: minmax(0,1fr) 84px minmax(0,1fr); }
+        .match-club { font-size: 13px; }
+        .match-player { font-size: 10px; }
+        .table-player, .table-club { max-width: none; }
+        .bottom-nav { right: auto; bottom: 18px; left: 50%; width: 420px; padding: 7px; transform: translateX(-50%); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">⚽</div>
+          <div>
+            <h1 id="league-name">Liga entre Amigos</h1>
+            <div class="live-label"><span class="live-dot" id="live-dot"></span><span id="connection-label">Conectando…</span></div>
+          </div>
+        </div>
+        <div class="top-actions">
+          <button class="icon-button" id="refresh-button" type="button" aria-label="Actualizar ahora" title="Actualizar ahora">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66L20 8"/><path d="M20 3v5h-5"/></svg>
+          </button>
+          <button class="organizer-button" id="organizer-button" type="button">Organizador</button>
+        </div>
+      </div>
+    </header>
+
+    <main class="shell">
+      <div class="offline-banner" id="offline-banner" role="status">No se pudo conectar. Mostramos la última información guardada y volveremos a intentar automáticamente.</div>
+
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-grid">
+          <div>
+            <p class="eyebrow">Temporada 2026</p>
+            <h2 class="hero-title" id="hero-title">La liga ya está armada</h2>
+            <p class="hero-copy">7 amigos, 21 partidos y una tabla que se recalcula sola con cada resultado.</p>
+          </div>
+          <div>
+            <div class="next-match" id="next-match"><div class="skeleton"></div></div>
+            <div class="summary-grid" id="summary-grid">
+              <div class="summary-item"><strong class="summary-number">7</strong><span class="summary-label">Jugadores</span></div>
+              <div class="summary-item"><strong class="summary-number">21</strong><span class="summary-label">Partidos</span></div>
+              <div class="summary-item"><strong class="summary-number">0</strong><span class="summary-label">Jugados</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="content-section active" id="fixture-view" data-view="fixture">
+        <div class="section-heading"><div><h2>Fixture</h2><p>Todos contra todos, una sola rueda</p></div></div>
+        <div id="fixture-list"><div class="skeleton"></div></div>
+      </section>
+
+      <section class="content-section" id="standings-view" data-view="standings">
+        <div class="section-heading"><div><h2>Tabla</h2><p>3 puntos por triunfo · 1 por empate</p></div></div>
+        <div id="standings-table"><div class="skeleton"></div></div>
+      </section>
+
+      <section class="content-section" id="teams-view" data-view="teams">
+        <div class="section-heading"><div><h2>Equipos</h2><p>Un club europeo para cada jugador</p></div></div>
+        <div class="teams-grid" id="teams-grid"><div class="skeleton"></div><div class="skeleton"></div></div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="Secciones de la liga">
+      <button class="nav-button active" type="button" data-target="fixture">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></svg><span>Fixture</span>
+      </button>
+      <button class="nav-button" type="button" data-target="standings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg><span>Tabla</span>
+      </button>
+      <button class="nav-button" type="button" data-target="teams">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Equipos</span>
+      </button>
+    </nav>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">La liga se actualizó</div>
+
+    <dialog id="login-dialog">
+      <div class="dialog-head">
+        <div><h2>Modo organizador</h2><p>Ingresá tu código para cargar resultados y cambiar horarios.</p></div>
+        <button class="close-dialog" type="button" data-close="login-dialog" aria-label="Cerrar">✕</button>
+      </div>
+      <form class="dialog-body" id="login-form">
+        <div class="field"><label for="organizer-pin">Código privado</label><input id="organizer-pin" type="password" inputmode="numeric" autocomplete="off" required placeholder="••••••" /></div>
+        <p class="form-error" id="login-error" aria-live="polite"></p>
+        <button class="primary-button" id="login-submit" type="submit">Entrar como organizador</button>
+      </form>
+    </dialog>
+
+    <dialog id="edit-dialog">
+      <div class="dialog-head">
+        <div><h2>Cargar partido</h2><p id="edit-match-name"></p></div>
+        <button class="close-dialog" type="button" data-close="edit-dialog" aria-label="Cerrar">✕</button>
+      </div>
+      <form class="dialog-body" id="edit-form">
+        <input id="fixture-id" type="hidden" />
+        <div class="score-fields">
+          <div class="field"><label id="home-score-label" for="home-score">Local</label><input id="home-score" type="number" inputmode="numeric" min="0" max="99" placeholder="–" /></div>
+          <div class="score-divider">—</div>
+          <div class="field"><label id="away-score-label" for="away-score">Visitante</label><input id="away-score" type="number" inputmode="numeric" min="0" max="99" placeholder="–" /></div>
+        </div>
+        <div class="field"><label for="scheduled-at">Fecha y hora</label><input id="scheduled-at" type="datetime-local" required /></div>
+        <p class="form-error" id="edit-error" aria-live="polite"></p>
+        <button class="primary-button" id="save-result" type="submit">Guardar y publicar</button>
+        <button class="secondary-button" id="clear-result" type="button">Quitar resultado</button>
+      </form>
+    </dialog>
+
+    <script>
+      (() => {
+        "use strict";
+
+        const LIVE_API = "https://liga-amigos.yaninaferraggini2018.chatgpt.site/league-data";
+        const SAME_ORIGIN_API = location.hostname.endsWith("chatgpt.site") || ["terminal.local", "localhost", "127.0.0.1"].includes(location.hostname);
+        const API_URL = SAME_ORIGIN_API ? "/league-data" : LIVE_API;
+        const TIME_ZONE = "America/Argentina/Buenos_Aires";
+        const state = { data: null, revision: null, organizerPin: sessionStorage.getItem("ligaOrganizerPin") || "", loading: false, toastTimer: null };
+
+        const $ = (selector) => document.querySelector(selector);
+        const $$ = (selector) => [...document.querySelectorAll(selector)];
+        const escapeHtml = (value) => String(value ?? "").replace(/[&<>'"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" }[char]));
+        const safeColor = (value) => /^#[0-9a-f]{6}$/i.test(String(value)) ? value : "#315d40";
+        const isPlayed = (fixture) => Number.isInteger(fixture.homeScore) && Number.isInteger(fixture.awayScore);
+        const getParticipant = (id) => state.data?.participants.find((participant) => participant.id === id);
+
+        function clubBadge(participant, mini = false) {
+          return `<span class="${mini ? "mini-badge" : "club-badge"}" style="--club:${safeColor(participant.color)}" aria-hidden="true">${escapeHtml(participant.shortName)}</span>`;
+        }
+
+        function formatDate(value, options) {
+          return new Intl.DateTimeFormat("es-AR", { timeZone: TIME_ZONE, ...options }).format(new Date(value));
+        }
+
+        function fullMatchDate(value) {
+          const formatted = formatDate(value, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", hour12: false });
+          return formatted.charAt(0).toUpperCase() + formatted.slice(1).replace(",", " ·");
+        }
+
+        function roundDate(value) {
+          const formatted = formatDate(value, { weekday: "short", day: "numeric", month: "short" });
+          return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+        }
+
+        function matchTime(value) {
+          return formatDate(value, { hour: "2-digit", minute: "2-digit", hour12: false });
+        }
+
+        function toDateTimeInput(value) {
+          const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+            timeZone: TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false,
+          }).formatToParts(new Date(value)).filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
+          return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+        }
+
+        function showToast(message) {
+          const toast = $("#toast");
+          toast.textContent = message;
+          toast.classList.add("show");
+          clearTimeout(state.toastTimer);
+          state.toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+        }
+
+        function updateConnection(ok, cached = false) {
+          $("#live-dot").classList.toggle("offline", !ok);
+          $("#connection-label").textContent = ok ? "EN VIVO · se actualiza sola" : cached ? "Última versión guardada" : "Sin conexión";
+          $("#offline-banner").classList.toggle("show", !ok);
+        }
+
+        async function apiFetch(method = "GET", body, pin = "") {
+          const response = await fetch(API_URL, {
+            method,
+            cache: "no-store",
+            headers: {
+              ...(body ? { "Content-Type": "application/json" } : {}),
+              ...(pin ? { "X-Organizer-Pin": pin } : {}),
+            },
+            ...(body ? { body: JSON.stringify(body) } : {}),
+          });
+          let payload = {};
+          try { payload = await response.json(); } catch (_) {}
+          if (!response.ok) throw new Error(payload.error || "No se pudo conectar con la liga.");
+          return payload;
+        }
+
+        async function loadLeague({ initial = false, announce = true } = {}) {
+          if (state.loading) return;
+          state.loading = true;
+          $("#refresh-button").classList.add("spin");
+          try {
+            const data = await apiFetch();
+            const changed = state.revision && state.revision !== data.updatedAt;
+            state.data = data;
+            state.revision = data.updatedAt;
+            localStorage.setItem("ligaDataCache", JSON.stringify(data));
+            updateConnection(true);
+            renderAll();
+            if (changed && announce) showToast("⚽ La liga se actualizó");
+          } catch (error) {
+            if (!state.data) {
+              try { state.data = JSON.parse(localStorage.getItem("ligaDataCache")); } catch (_) {}
+            }
+            updateConnection(false, Boolean(state.data));
+            if (state.data) renderAll();
+            if (!initial) showToast(error.message);
+          } finally {
+            state.loading = false;
+            $("#refresh-button").classList.remove("spin");
+          }
+        }
+
+        function renderAll() {
+          if (!state.data) return;
+          $("#league-name").textContent = state.data.leagueName;
+          renderHero();
+          renderFixture();
+          renderStandings();
+          renderTeams();
+          setOrganizer(Boolean(state.organizerPin), false);
+        }
+
+        function renderHero() {
+          const fixtures = state.data.fixtures;
+          const played = fixtures.filter(isPlayed).length;
+          const now = Date.now();
+          const next = fixtures
+            .filter((fixture) => !isPlayed(fixture))
+            .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt))
+            .find((fixture) => new Date(fixture.scheduledAt).getTime() >= now) || fixtures.find((fixture) => !isPlayed(fixture));
+
+          $("#summary-grid").innerHTML = `
+            <div class="summary-item"><strong class="summary-number">${state.data.participants.length}</strong><span class="summary-label">Jugadores</span></div>
+            <div class="summary-item"><strong class="summary-number">${fixtures.length}</strong><span class="summary-label">Partidos</span></div>
+            <div class="summary-item"><strong class="summary-number">${played}</strong><span class="summary-label">Jugados</span></div>`;
+
+          if (!next) {
+            $("#next-match").innerHTML = `<p class="eyebrow">Liga terminada</p><strong>¡Ya se jugaron todos los partidos!</strong>`;
+            return;
+          }
+          const home = getParticipant(next.homeParticipantId);
+          const away = getParticipant(next.awayParticipantId);
+          $("#next-match").innerHTML = `
+            <div class="next-meta"><span>PRÓXIMO · FECHA ${next.round}</span><time datetime="${escapeHtml(next.scheduledAt)}">${escapeHtml(fullMatchDate(next.scheduledAt))}</time></div>
+            <div class="next-teams">
+              <div class="next-team">${clubBadge(home)}<div class="next-club">${escapeHtml(home.clubName)}</div><div class="next-player">${escapeHtml(home.playerName)}</div></div>
+              <div class="versus">VS</div>
+              <div class="next-team">${clubBadge(away)}<div class="next-club">${escapeHtml(away.clubName)}</div><div class="next-player">${escapeHtml(away.playerName)}</div></div>
+            </div>`;
+        }
+
+        function renderFixture() {
+          const rounds = new Map();
+          state.data.fixtures.forEach((fixture) => {
+            if (!rounds.has(fixture.round)) rounds.set(fixture.round, []);
+            rounds.get(fixture.round).push(fixture);
+          });
+          $("#fixture-list").innerHTML = [...rounds.entries()].map(([round, fixtures]) => {
+            const playingIds = new Set(fixtures.flatMap((fixture) => [fixture.homeParticipantId, fixture.awayParticipantId]));
+            const resting = state.data.participants.find((participant) => !playingIds.has(participant.id));
+            const games = fixtures.map((fixture) => {
+              const home = getParticipant(fixture.homeParticipantId);
+              const away = getParticipant(fixture.awayParticipantId);
+              return `<article class="match-row">
+                <div class="match-team">${clubBadge(home)}<div class="match-team-copy"><div class="match-club">${escapeHtml(home.clubName)}</div><div class="match-player">${escapeHtml(home.playerName)}</div></div></div>
+                <div class="match-center"><strong class="match-score">${isPlayed(fixture) ? `${fixture.homeScore}–${fixture.awayScore}` : "VS"}</strong><time class="match-time" datetime="${escapeHtml(fixture.scheduledAt)}">${escapeHtml(matchTime(fixture.scheduledAt))}</time><button class="edit-result" type="button" data-edit-fixture="${fixture.id}">${isPlayed(fixture) ? "EDITAR" : "CARGAR"}</button></div>
+                <div class="match-team away">${clubBadge(away)}<div class="match-team-copy"><div class="match-club">${escapeHtml(away.clubName)}</div><div class="match-player">${escapeHtml(away.playerName)}</div></div></div>
+              </article>`;
+            }).join("");
+            return `<section class="round"><div class="round-head"><span class="round-title">Fecha ${round}</span><time class="round-date" datetime="${escapeHtml(fixtures[0].scheduledAt)}">${escapeHtml(roundDate(fixtures[0].scheduledAt))}</time></div>${games}<div class="resting">Descansa: <strong>${escapeHtml(resting?.playerName || "—")}</strong> · ${escapeHtml(resting?.clubName || "")}</div></section>`;
+          }).join("");
+        }
+
+        function calculateStandings() {
+          const table = new Map(state.data.participants.map((participant) => [participant.id, { participant, pj: 0, pg: 0, pe: 0, pp: 0, gf: 0, gc: 0, pts: 0 }]));
+          state.data.fixtures.filter(isPlayed).forEach((fixture) => {
+            const home = table.get(fixture.homeParticipantId);
+            const away = table.get(fixture.awayParticipantId);
+            home.pj++; away.pj++;
+            home.gf += fixture.homeScore; home.gc += fixture.awayScore;
+            away.gf += fixture.awayScore; away.gc += fixture.homeScore;
+            if (fixture.homeScore > fixture.awayScore) { home.pg++; home.pts += 3; away.pp++; }
+            else if (fixture.homeScore < fixture.awayScore) { away.pg++; away.pts += 3; home.pp++; }
+            else { home.pe++; away.pe++; home.pts++; away.pts++; }
+          });
+          return [...table.values()].map((row) => ({ ...row, dg: row.gf - row.gc })).sort((a, b) => b.pts - a.pts || b.dg - a.dg || b.gf - a.gf || a.participant.displayOrder - b.participant.displayOrder);
+        }
+
+        function renderStandings() {
+          const rows = calculateStandings();
+          $("#standings-table").innerHTML = `<div class="table-card"><div style="overflow-x:auto"><table class="standings">
+            <thead><tr><th>#</th><th>Jugador</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>DG</th><th>PTS</th></tr></thead>
+            <tbody>${rows.map((row, index) => `<tr class="${index === 0 ? "leader" : ""}"><td class="position">${index + 1}</td><td><div class="table-team">${clubBadge(row.participant, true)}<div class="table-team-text"><div class="table-player">${escapeHtml(row.participant.playerName)}</div><div class="table-club">${escapeHtml(row.participant.clubName)}</div></div></div></td><td>${row.pj}</td><td>${row.pg}</td><td>${row.pe}</td><td>${row.pp}</td><td>${row.dg > 0 ? "+" : ""}${row.dg}</td><td class="points">${row.pts}</td></tr>`).join("")}</tbody>
+          </table></div><div class="legend">PJ: jugados · G: ganados · E: empatados · P: perdidos · DG: diferencia de gol · PTS: puntos</div></div>`;
+        }
+
+        function renderTeams() {
+          $("#teams-grid").innerHTML = state.data.participants.map((participant) => `<article class="team-card">${clubBadge(participant)}<div class="team-card-copy"><div class="team-card-player">${escapeHtml(participant.playerName)}</div><div class="team-card-club">${escapeHtml(participant.clubName)}</div></div><span class="europe-chip">EUROPA</span></article>`).join("");
+        }
+
+        function switchView(target) {
+          $$(".content-section").forEach((section) => section.classList.toggle("active", section.dataset.view === target));
+          $$(".nav-button").forEach((button) => button.classList.toggle("active", button.dataset.target === target));
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        function setOrganizer(active, notify = true) {
+          document.body.classList.toggle("organizer", active);
+          $("#organizer-button").classList.toggle("active", active);
+          $("#organizer-button").textContent = active ? "Organizador ✓" : "Organizador";
+          if (notify) showToast(active ? "Modo organizador activado" : "Modo organizador cerrado");
+        }
+
+        async function verifyOrganizer(pin) {
+          await apiFetch("POST", { type: "verify-organizer" }, pin);
+          state.organizerPin = pin;
+          sessionStorage.setItem("ligaOrganizerPin", pin);
+          setOrganizer(true);
+        }
+
+        function openEdit(fixtureId) {
+          const fixture = state.data.fixtures.find((item) => item.id === Number(fixtureId));
+          if (!fixture) return;
+          const home = getParticipant(fixture.homeParticipantId);
+          const away = getParticipant(fixture.awayParticipantId);
+          $("#fixture-id").value = fixture.id;
+          $("#edit-match-name").textContent = `${home.playerName} (${home.clubName}) vs ${away.playerName} (${away.clubName})`;
+          $("#home-score-label").textContent = home.playerName;
+          $("#away-score-label").textContent = away.playerName;
+          $("#home-score").value = fixture.homeScore ?? "";
+          $("#away-score").value = fixture.awayScore ?? "";
+          $("#scheduled-at").value = toDateTimeInput(fixture.scheduledAt);
+          $("#clear-result").style.display = isPlayed(fixture) ? "block" : "none";
+          $("#edit-error").textContent = "";
+          $("#edit-dialog").showModal();
+        }
+
+        async function saveFixture({ clear = false } = {}) {
+          const homeRaw = $("#home-score").value.trim();
+          const awayRaw = $("#away-score").value.trim();
+          if (!clear && ((homeRaw === "") !== (awayRaw === ""))) {
+            $("#edit-error").textContent = "Cargá los dos resultados o dejá ambos vacíos.";
+            return;
+          }
+          const dateValue = $("#scheduled-at").value;
+          if (!dateValue) {
+            $("#edit-error").textContent = "Elegí una fecha y un horario.";
+            return;
+          }
+          const button = $("#save-result");
+          button.disabled = true;
+          $("#edit-error").textContent = "";
+          try {
+            await apiFetch("PATCH", {
+              fixtureId: Number($("#fixture-id").value),
+              homeScore: clear || homeRaw === "" ? null : Number(homeRaw),
+              awayScore: clear || awayRaw === "" ? null : Number(awayRaw),
+              scheduledAt: `${dateValue}:00-03:00`,
+            }, state.organizerPin);
+            $("#edit-dialog").close();
+            await loadLeague({ announce: false });
+            showToast(clear ? "Resultado eliminado" : "Resultado publicado para todos");
+          } catch (error) {
+            $("#edit-error").textContent = error.message;
+            if (/organizador|código/i.test(error.message)) {
+              state.organizerPin = "";
+              sessionStorage.removeItem("ligaOrganizerPin");
+              setOrganizer(false, false);
+            }
+          } finally {
+            button.disabled = false;
+          }
+        }
+
+        $$(".nav-button").forEach((button) => button.addEventListener("click", () => switchView(button.dataset.target)));
+        $("#refresh-button").addEventListener("click", () => loadLeague({ announce: false }).then(() => showToast("Información actualizada")));
+        $("#organizer-button").addEventListener("click", () => {
+          if (state.organizerPin) {
+            state.organizerPin = "";
+            sessionStorage.removeItem("ligaOrganizerPin");
+            setOrganizer(false);
+          } else {
+            $("#login-error").textContent = "";
+            $("#organizer-pin").value = "";
+            $("#login-dialog").showModal();
+            setTimeout(() => $("#organizer-pin").focus(), 50);
+          }
+        });
+        $$("[data-close]").forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
+        $("#fixture-list").addEventListener("click", (event) => {
+          const button = event.target.closest("[data-edit-fixture]");
+          if (button && state.organizerPin) openEdit(button.dataset.editFixture);
+        });
+        $("#login-form").addEventListener("submit", async (event) => {
+          event.preventDefault();
+          const button = $("#login-submit");
+          button.disabled = true;
+          $("#login-error").textContent = "";
+          try {
+            await verifyOrganizer($("#organizer-pin").value.trim());
+            $("#login-dialog").close();
+          } catch (error) {
+            $("#login-error").textContent = error.message;
+          } finally { button.disabled = false; }
+        });
+        $("#edit-form").addEventListener("submit", (event) => { event.preventDefault(); saveFixture(); });
+        $("#clear-result").addEventListener("click", () => saveFixture({ clear: true }));
+        [$("#login-dialog"), $("#edit-dialog")].forEach((dialog) => dialog.addEventListener("click", (event) => { if (event.target === dialog) dialog.close(); }));
+        document.addEventListener("visibilitychange", () => { if (!document.hidden) loadLeague({ announce: true }); });
+        window.addEventListener("online", () => loadLeague({ announce: false }));
+
+        loadLeague({ initial: true, announce: false });
+        setInterval(() => loadLeague({ announce: true }), 4000);
+      })();
+    </script>
+  </body>
+</html>
